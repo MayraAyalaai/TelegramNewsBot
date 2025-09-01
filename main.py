@@ -6,6 +6,8 @@ from telegram.ext import Application, CommandHandler, ContextTypes
 from news_fetcher import NewsFetcher
 from user_data import UserDataManager
 from scheduler import NewsScheduler
+from stats import StatsManager
+from rate_limiter import RateLimiter
 
 load_dotenv()
 
@@ -20,17 +22,27 @@ BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
 news_fetcher = NewsFetcher()
 user_manager = UserDataManager()
 scheduler = NewsScheduler(BOT_TOKEN)
+stats_manager = StatsManager()
+rate_limiter = RateLimiter()
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Send a message when the command /start is issued."""
     user_id = update.effective_user.id
     username = update.effective_user.username
     
+    is_new_user = str(user_id) not in user_manager.users_data
     user_manager.register_user(user_id, username)
+    
+    if is_new_user:
+        stats_manager.record_new_user()
+    
+    stats_manager.record_command_usage('start', user_id)
     await update.message.reply_text('Hi! I am your news bot. Use /help to see available commands.')
 
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Send a message when the command /help is issued."""
+    stats_manager.record_command_usage('help', update.effective_user.id)
+    
     help_text = """
 Available commands:
 /start - Start the bot
@@ -47,6 +59,17 @@ Available commands:
 async def news_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Send latest general news."""
     try:
+        user_id = update.effective_user.id
+        
+        # Check rate limit
+        allowed, message = rate_limiter.is_allowed(user_id)
+        if not allowed:
+            await update.message.reply_text(f"⚠️ {message}")
+            return
+        
+        stats_manager.record_command_usage('news', user_id)
+        stats_manager.record_news_request('general')
+        
         await update.message.reply_text("Fetching latest news...")
         
         news_items = news_fetcher.get_news('general', 3)
@@ -70,6 +93,17 @@ async def news_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def tech_news_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Send latest tech news."""
     try:
+        user_id = update.effective_user.id
+        
+        # Check rate limit
+        allowed, message = rate_limiter.is_allowed(user_id)
+        if not allowed:
+            await update.message.reply_text(f"⚠️ {message}")
+            return
+        
+        stats_manager.record_command_usage('tech', user_id)
+        stats_manager.record_news_request('tech')
+        
         await update.message.reply_text("Fetching latest tech news...")
         
         news_items = news_fetcher.get_news('tech', 3)
@@ -93,6 +127,8 @@ async def tech_news_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def subscribe_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Subscribe to news categories."""
     try:
+        stats_manager.record_command_usage('subscribe', update.effective_user.id)
+        
         user_id = update.effective_user.id
         available_categories = news_fetcher.get_available_categories()
         
@@ -111,6 +147,7 @@ async def subscribe_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         user_manager.register_user(user_id, update.effective_user.username)
         
         if user_manager.add_subscription(user_id, category):
+            stats_manager.record_subscription_change(category, True)
             await update.message.reply_text(f"✅ Successfully subscribed to {category} news!")
             logger.info(f"User {user_id} subscribed to {category}")
         else:
@@ -122,6 +159,8 @@ async def subscribe_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def unsubscribe_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Unsubscribe from news categories."""
+    stats_manager.record_command_usage('unsubscribe', update.effective_user.id)
+    
     user_id = update.effective_user.id
     
     if not context.args:
@@ -135,12 +174,15 @@ async def unsubscribe_command(update: Update, context: ContextTypes.DEFAULT_TYPE
     category = context.args[0].lower()
     
     if user_manager.remove_subscription(user_id, category):
+        stats_manager.record_subscription_change(category, False)
         await update.message.reply_text(f"✅ Successfully unsubscribed from {category} news!")
     else:
         await update.message.reply_text(f"❌ You weren't subscribed to {category} news!")
 
 async def mysubs_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Show user's subscriptions."""
+    stats_manager.record_command_usage('mysubs', update.effective_user.id)
+    
     user_id = update.effective_user.id
     subscriptions = user_manager.get_user_subscriptions(user_id)
     
@@ -153,6 +195,17 @@ async def mysubs_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def business_news_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Send latest business news."""
     try:
+        user_id = update.effective_user.id
+        
+        # Check rate limit
+        allowed, message = rate_limiter.is_allowed(user_id)
+        if not allowed:
+            await update.message.reply_text(f"⚠️ {message}")
+            return
+        
+        stats_manager.record_command_usage('business', user_id)
+        stats_manager.record_news_request('business')
+        
         await update.message.reply_text("Fetching latest business news...")
         
         news_items = news_fetcher.get_news('business', 3)
