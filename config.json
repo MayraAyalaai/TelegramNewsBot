@@ -1,0 +1,56 @@
+{
+  "news_sources": {
+    "tech": [
+      {
+        "name": "TechCrunch",
+        "url": "https://techcrunch.com/feed/",
+        "active": true
+      },
+      {
+        "name": "The Verge",
+        "url": "https://www.theverge.com/rss/index.xml",
+        "active": true
+      },
+      {
+        "name": "Ars Technica",
+        "url": "http://feeds.arstechnica.com/arstechnica/index",
+        "active": true
+      }
+    ],
+    "general": [
+      {
+        "name": "CNN",
+        "url": "https://rss.cnn.com/rss/edition.rss",
+        "active": true
+      },
+      {
+        "name": "BBC World",
+        "url": "https://feeds.bbci.co.uk/news/world/rss.xml",
+        "active": true
+      },
+      {
+        "name": "Reuters",
+        "url": "https://www.reuters.com/rssFeed/worldNews",
+        "active": true
+      }
+    ],
+    "business": [
+      {
+        "name": "Bloomberg",
+        "url": "https://feeds.bloomberg.com/markets/news.rss",
+        "active": true
+      },
+      {
+        "name": "Financial Times",
+        "url": "https://www.ft.com/rss/home",
+        "active": false
+      }
+    ]
+  },
+  "schedule_times": [
+    "09:00",
+    "18:00"
+  ],
+  "max_articles_per_delivery": 2,
+  "max_articles_per_request": 5
+}
