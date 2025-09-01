@@ -1,13 +1,16 @@
 # Telegram News Bot
 
-A simple Telegram bot that fetches and delivers news from various RSS sources.
+A comprehensive Telegram bot that fetches and delivers news from various RSS sources with advanced features.
 
 ## Features
 
-- Fetch latest general news
-- Get tech news updates
-- Simple command interface
-- RSS feed parsing from multiple sources
+- 📰 Multi-category news fetching (General, Tech, Business)
+- 🔔 User subscription system with automated delivery
+- ⏰ Scheduled news delivery (9 AM & 6 PM daily)
+- 📊 Usage analytics and statistics tracking
+- 🛡️ Rate limiting to prevent abuse
+- 👑 Admin commands for bot management
+- ⚙️ Configurable news sources via JSON
 
 ## Setup
 
@@ -31,12 +34,47 @@ A simple Telegram bot that fetches and delivers news from various RSS sources.
 
 ## Available Commands
 
-- `/start` - Start the bot
+### User Commands
+- `/start` - Start the bot and register
 - `/help` - Show available commands
 - `/news` - Get latest general news (3 articles)
 - `/tech` - Get latest tech news (3 articles)
+- `/business` - Get latest business news (3 articles)
+- `/subscribe <category>` - Subscribe to news category
+- `/unsubscribe <category>` - Unsubscribe from category
+- `/mysubs` - Show your active subscriptions
+
+### Admin Commands
+- `/adminstats` - View bot usage statistics
+- `/broadcast <message>` - Send message to all users
+- `/userinfo <user_id>` - Get user information and stats
 
 ## News Sources
 
-- General: CNN, BBC World News
-- Tech: TechCrunch, The Verge
+### General News
+- CNN World News
+- BBC World News
+- Reuters World News
+
+### Technology
+- TechCrunch
+- The Verge
+- Ars Technica
+
+### Business
+- Bloomberg Markets
+- Financial Times (configurable)
+
+## Rate Limiting
+
+- 10 requests per minute per user
+- 100 requests per hour per user
+- Automatic cleanup of old request records
+
+## Configuration
+
+Edit `config.json` to:
+- Add/remove news sources
+- Configure admin user IDs
+- Adjust delivery schedules
+- Set rate limiting parameters

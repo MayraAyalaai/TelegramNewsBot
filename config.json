@@ -52,5 +52,8 @@
     "18:00"
   ],
   "max_articles_per_delivery": 2,
-  "max_articles_per_request": 5
+  "max_articles_per_request": 5,
+  "admin_user_ids": [
+    123456789
+  ]
 }

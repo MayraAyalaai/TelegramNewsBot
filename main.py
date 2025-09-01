@@ -25,6 +25,11 @@ scheduler = NewsScheduler(BOT_TOKEN)
 stats_manager = StatsManager()
 rate_limiter = RateLimiter()
 
+def is_admin(user_id: int) -> bool:
+    """Check if user is an admin"""
+    admin_ids = news_fetcher.config.get('admin_user_ids', [])
+    return user_id in admin_ids
+
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Send a message when the command /start is issued."""
     user_id = update.effective_user.id
@@ -226,6 +231,98 @@ async def business_news_command(update: Update, context: ContextTypes.DEFAULT_TY
         logger.error(f"Error in business_news_command: {e}")
         await update.message.reply_text("Sorry, there was an error fetching business news. Please try again later.")
 
+async def admin_stats_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Show bot statistics (admin only)"""
+    user_id = update.effective_user.id
+    
+    if not is_admin(user_id):
+        await update.message.reply_text("❌ You don't have permission to use this command.")
+        return
+    
+    try:
+        stats_summary = stats_manager.get_stats_summary()
+        await update.message.reply_text(stats_summary, parse_mode='Markdown')
+    except Exception as e:
+        logger.error(f"Error in admin_stats_command: {e}")
+        await update.message.reply_text("Sorry, there was an error retrieving statistics.")
+
+async def admin_broadcast_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Broadcast message to all users (admin only)"""
+    user_id = update.effective_user.id
+    
+    if not is_admin(user_id):
+        await update.message.reply_text("❌ You don't have permission to use this command.")
+        return
+    
+    if not context.args:
+        await update.message.reply_text("Please provide a message to broadcast.\nExample: /broadcast Hello everyone!")
+        return
+    
+    message = ' '.join(context.args)
+    active_users = user_manager.get_all_active_users()
+    
+    sent_count = 0
+    failed_count = 0
+    
+    await update.message.reply_text(f"Broadcasting message to {len(active_users)} users...")
+    
+    for user_id_str in active_users:
+        try:
+            await context.bot.send_message(
+                chat_id=int(user_id_str),
+                text=f"📢 *Broadcast Message*\n\n{message}",
+                parse_mode='Markdown'
+            )
+            sent_count += 1
+        except Exception as e:
+            failed_count += 1
+            logger.error(f"Failed to send broadcast to user {user_id_str}: {e}")
+    
+    await update.message.reply_text(f"✅ Broadcast complete!\nSent: {sent_count}\nFailed: {failed_count}")
+
+async def admin_user_info_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Get user information (admin only)"""
+    user_id = update.effective_user.id
+    
+    if not is_admin(user_id):
+        await update.message.reply_text("❌ You don't have permission to use this command.")
+        return
+    
+    if not context.args:
+        await update.message.reply_text("Please provide a user ID.\nExample: /userinfo 123456789")
+        return
+    
+    try:
+        target_user_id = int(context.args[0])
+        user_id_str = str(target_user_id)
+        
+        if user_id_str not in user_manager.users_data:
+            await update.message.reply_text("User not found in database.")
+            return
+        
+        user_data = user_manager.users_data[user_id_str]
+        subscriptions = user_data.get('subscriptions', [])
+        rate_stats = rate_limiter.get_user_stats(target_user_id)
+        
+        info = f"""👤 *User Information*
+        
+User ID: `{target_user_id}`
+Username: {user_data.get('username', 'Unknown')}
+Active: {'Yes' if user_data.get('active', True) else 'No'}
+Subscriptions: {', '.join(subscriptions) if subscriptions else 'None'}
+
+📊 *Rate Limiting Stats*
+Requests last minute: {rate_stats['requests_last_minute']}/{rate_stats['minute_limit']}
+Requests last hour: {rate_stats['requests_last_hour']}/{rate_stats['hour_limit']}"""
+        
+        await update.message.reply_text(info, parse_mode='Markdown')
+        
+    except ValueError:
+        await update.message.reply_text("Invalid user ID format.")
+    except Exception as e:
+        logger.error(f"Error in admin_user_info_command: {e}")
+        await update.message.reply_text("Sorry, there was an error retrieving user information.")
+
 def main():
     """Run the bot."""
     if not BOT_TOKEN:
@@ -242,6 +339,11 @@ def main():
     application.add_handler(CommandHandler("subscribe", subscribe_command))
     application.add_handler(CommandHandler("unsubscribe", unsubscribe_command))
     application.add_handler(CommandHandler("mysubs", mysubs_command))
+    
+    # Admin commands
+    application.add_handler(CommandHandler("adminstats", admin_stats_command))
+    application.add_handler(CommandHandler("broadcast", admin_broadcast_command))
+    application.add_handler(CommandHandler("userinfo", admin_user_info_command))
     
     scheduler.start_scheduler()
     
